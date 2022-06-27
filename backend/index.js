@@ -101,6 +101,64 @@ app.post('/participants', async (req, res) => {
 
 });
 
+app.get('/messages', async (req, res) => {
+	
+	const {user: from} = req.headers;
+
+	try {
+
+		await mongoClient.connect();
+		const db = mongoClient.db('bate_papo_uol');
+
+		const messages = await db.collection("messages").find({from: from}).toArray();
+
+		res.send(messages); 
+		mongoClient.close();
+
+	} catch (error) {
+
+		res.status(422).send("Deu ruim");
+		mongoClient.close();
+
+	}
+
+})
+
+app.post('/messages', async (req, res) => {
+
+	const newMessage = req.body;
+	const validou = messageSchema.validate(newMessage, {abortEarly: false});
+	const { error } = validou;
+
+	if(error) {
+		const m = error.details.map(item => item.message);
+		res.send(m);
+		return;
+	}
+
+	try {
+
+		await mongoClient.connect();
+		const db = mongoClient.db('bate_papo_uol');
+
+		const {to, text, type} = req.body;
+		const {user: from} = req.headers;
+	
+
+		await db.collection("messages").insertOne({to: to, text: text, type: type, from: from, time: dayjs().format('HH:mm:ss') });
+
+		res.sendStatus(201);
+		mongoClient.close();
+
+	} catch (error) {
+
+		res.status(422).send("Deu ruim");
+		mongoClient.close();
+
+	}
+
+});
+
 app.listen(PORT, () => {
 	console.log(chalk.blue.bold(`Servidor rodando na porta ${PORT}`))
 });
