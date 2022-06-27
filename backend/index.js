@@ -159,6 +159,35 @@ app.post('/messages', async (req, res) => {
 
 });
 
+app.post('/status', async (req, res) => {
+
+	const {user} = req.headers;
+
+	try {
+
+		await mongoClient.connect();
+		const db = mongoClient.db('bate_papo_uol');
+
+		const verification = await db.collection("participants").findOne({name: user})
+
+		if(verification) {
+			await db.collection("participants").updateOne({name: user },{$set: {lastStatus: Date.now()}});
+			res.sendStatus(200);
+			mongoClient.close();
+		} else {
+			res.sendStatus(404);
+			mongoClient.close();
+		}
+
+	} catch (error) {
+
+		res.status(422).send("Deu ruim");
+		mongoClient.close();
+
+	}
+
+});
+
 app.listen(PORT, () => {
 	console.log(chalk.blue.bold(`Servidor rodando na porta ${PORT}`))
 });
