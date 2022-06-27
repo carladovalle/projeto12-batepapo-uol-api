@@ -129,6 +129,13 @@ app.post('/participants', async (req, res) => {
 app.get('/messages', async (req, res) => {
 	
 	const {user: from} = req.headers;
+	const limit = parseInt(req.query.limit);
+
+    if (!limit) {
+		res.send(messages);
+		mongoClient.close();
+		return;
+	}
 
 	try {
 
@@ -137,7 +144,7 @@ app.get('/messages', async (req, res) => {
 
 		const messages = await db.collection("messages").find({from: from}).toArray();
 
-		res.send(messages); 
+		res.send(messages.slice(-limit)); 
 		mongoClient.close();
 
 	} catch (error) {
