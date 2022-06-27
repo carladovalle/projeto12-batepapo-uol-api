@@ -30,9 +30,34 @@ app.use(express.json());
 let db;
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 
-app.get('/test-servidor', (req, res) => {
-	res.send('Olá, o servidor está funcionando.')
-})
+setInterval(async () => {
+	
+    try {
+		await mongoClient.connect();
+		const db = mongoClient.db('bate_papo_uol');
+
+        const participants = await db.collection("participants").find({}).toArray();
+        const lastStatusNow = Date.now();
+
+        for (const participant of participants) {
+            if (participant.lastStatus < lastStatusNow - 10000) {
+                await db.collection("participants").deleteOne({ lastStatus: participant.lastStatus });
+                await db.collection("messages").insertOne(
+                    {
+                        from: participant.name, 
+                        to: 'Todos', 
+                        text: 'sai da sala...', 
+                        type: 'status', 
+                        time: dayjs().format('HH:mm:ss')
+                    }
+                )
+            }
+        }
+        mongoClient.close();
+    } catch (err) {
+		console.log(err);
+    }
+}, 15000);
 
 app.get('/participants', async (req, res) => {
 	
@@ -48,7 +73,7 @@ app.get('/participants', async (req, res) => {
 
 	} catch (error) {
 
-		res.status(422).send("Deu ruim");
+		res.status(500).send("Deu ruim");
 		mongoClient.close();
 
 	}
@@ -74,8 +99,8 @@ app.post('/participants', async (req, res) => {
 
 		const {name, lastStatus} = req.body;
 		
-		const p = await db.collection('participants').findOne({ name });
-		if (p) {
+		const participant = await db.collection('participants').findOne({ name });
+		if (participant) {
 		res.status(409).send('User already exists');
 		return;
 		}
@@ -94,7 +119,7 @@ app.post('/participants', async (req, res) => {
 
 	} catch (error) {
 
-		res.status(422).send("Deu ruim");
+		res.status(500).send("Deu ruim");
 		mongoClient.close();
 
 	}
@@ -117,7 +142,7 @@ app.get('/messages', async (req, res) => {
 
 	} catch (error) {
 
-		res.status(422).send("Deu ruim");
+		res.status(500).send("Deu ruim");
 		mongoClient.close();
 
 	}
@@ -152,7 +177,7 @@ app.post('/messages', async (req, res) => {
 
 	} catch (error) {
 
-		res.status(422).send("Deu ruim");
+		res.status(500).send("Deu ruim");
 		mongoClient.close();
 
 	}
@@ -181,7 +206,7 @@ app.post('/status', async (req, res) => {
 
 	} catch (error) {
 
-		res.status(422).send("Deu ruim");
+		res.status(500).send("Deu ruim");
 		mongoClient.close();
 
 	}
